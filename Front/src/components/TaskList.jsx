@@ -9,6 +9,8 @@ import Notification from "../components/Notification";
 import { AnimatePresence, motion } from "framer-motion";
 import { Pencil, Trash2, PlusCircle, AlertTriangle } from "lucide-react";
 import TaskModal from "../components/TaskModal";
+import { logout } from "../services/authService";
+import { useNavigate } from "react-router-dom";
 
 export default function TaskList() {
   const [tasks, setTasks] = useState({
@@ -17,7 +19,7 @@ export default function TaskList() {
     realizadas: [],
     cancelado: [],
   });
-
+  const navigate = useNavigate();
   const [notif, setNotif] = useState({ message: "", type: "" });
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -65,7 +67,7 @@ export default function TaskList() {
       tags,
       color,
       status: "actividades",
-    }; 
+    };
 
     try {
       if (editingId) {
@@ -149,6 +151,16 @@ export default function TaskList() {
     setEditingId(task.id);
     setIsModalOpen(true);
   };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/login"); // 👈 Redirige al login
+    } catch (err) {
+      showNotif("Error al cerrar sesión", "error");
+    }
+  };
+
   return (
     <div className="relative min-h-screen bg-[#111827] text-gray-200 p-4 font-mono">
       <div className="max-w-6xl mx-auto">
@@ -157,6 +169,13 @@ export default function TaskList() {
         </h2>
 
         <div className="mb-8 flex justify-end">
+          <button
+            onClick={handleLogout}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200"
+          >
+            Cerrar sesión
+          </button>
+
           <button
             onClick={openCreateModal}
             className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200"
