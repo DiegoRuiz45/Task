@@ -12,6 +12,19 @@ import TaskModal from "../components/TaskModal";
 import { logout } from "../services/authService";
 import { useNavigate } from "react-router-dom";
 
+const statusColors = {
+  actividades: "border-blue-500 shadow-blue-500/20",
+  enProceso: "border-yellow-500 shadow-yellow-500/20",
+  realizadas: "border-green-500 shadow-green-500/20",
+  cancelado: "border-red-500 shadow-red-500/20",
+};
+
+const priorityBadge = {
+  alta: "bg-red-500 text-white",
+  media: "bg-yellow-500 text-black",
+  baja: "bg-green-500 text-white",
+};
+
 export default function TaskList({ user, setUser }) {
   const [tasks, setTasks] = useState({
     actividades: [],
@@ -19,19 +32,22 @@ export default function TaskList({ user, setUser }) {
     realizadas: [],
     cancelado: [],
   });
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   const [notif, setNotif] = useState({ message: "", type: "" });
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [modalTab, setModalTab] = useState("detalles");
 
-  // Campos de la tarea
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("media");
   const [userId, setUserId] = useState(null);
   const [tags, setTags] = useState([]);
   const [color, setColor] = useState("#60a5fa");
+  const [subtasks, setSubtasks] = useState([]);
+  const [history, setHistory] = useState([]);
 
   const showNotif = (message, type = "info") => {
     setNotif({ message, type });
@@ -58,7 +74,6 @@ export default function TaskList({ user, setUser }) {
 
   const handleSaveTask = async () => {
     if (!title.trim()) return;
-
     const taskData = {
       title,
       description,
@@ -66,6 +81,8 @@ export default function TaskList({ user, setUser }) {
       user_id: userId,
       tags,
       color,
+      subtasks,
+      history,
       status: "actividades",
     };
 
@@ -129,7 +146,10 @@ export default function TaskList({ user, setUser }) {
     setUserId(null);
     setTags([]);
     setColor("#60a5fa");
+    setSubtasks([]);
+    setHistory([]);
     setEditingId(null);
+    setModalTab("detalles");
   };
 
   useEffect(() => {
@@ -137,7 +157,7 @@ export default function TaskList({ user, setUser }) {
   }, []);
 
   const openCreateModal = () => {
-    closeModal(); // limpia todo antes de abrir
+    closeModal();
     setIsModalOpen(true);
   };
 
@@ -148,92 +168,164 @@ export default function TaskList({ user, setUser }) {
     setUserId(task.user_id || null);
     setTags(task.tags || []);
     setColor(task.color || "#60a5fa");
+    setSubtasks(task.subtasks || []);
+    setHistory(task.history || []);
     setEditingId(task.id);
     setIsModalOpen(true);
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setUser(null); // 👈 Ahora sí va a limpiar el user
-      navigate("/login"); // Redirige al login
-    } catch (err) {
-      showNotif("Error al cerrar sesión", "error");
-    }
-  };
+  const filteredTasks = Object.fromEntries(
+    Object.entries(tasks).map(([status, items]) => [
+      status,
+      items.filter(
+        (t) =>
+          t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (t.tags || []).some((tag) =>
+            tag.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+      ),
+    ])
+  );
 
   return (
-    <div className="relative min-h-screen bg-[#111827] text-gray-200 p-4 font-mono">
-      <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold text-center text-gray-100 mb-2 tracking-wide">
-          🛠️ Gestor de Tareas Dev
-        </h2>
-        <p className="text-center text-indigo-400 mb-8">
-          Hola, {user?.username} 👋
-        </p>
-
-        <div className="mb-8 flex justify-end">
-          <button
-            onClick={handleLogout}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200"
-          >
-            Cerrar sesión
-          </button>
-
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200"
-          >
-            <PlusCircle size={18} />
-            Crear tarea
-          </button>
+    <div className=" h-screen bg-[#111827] text-gray-200 font-mono flex flex-col">
+      {/* HEADER */}
+      <div className="p-4 flex-shrink-0">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-4 flex justify-between items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-100 tracking-wide">
+                🛠️ Gestor de Tareas
+              </h2>
+              <p className="text-indigo-400">Hola, {user?.username} 👋</p>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Buscar tareas..."
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="bg-gray-800 text-white px-3 py-2 rounded-md"
+              />
+              <button
+                onClick={openCreateModal}
+                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+              >
+                <PlusCircle size={18} />
+                Crear
+              </button>
+            </div>
+          </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {["actividades", "enProceso", "realizadas", "cancelado"].map(
-            (status) => (
-              <div
+      {/* CONTENIDO SCROLLEABLE */}
+      <div className="flex-1 overflow-y-auto p-4 min-h-0">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {Object.keys(filteredTasks).map((status) => (
+              <motion.div
                 key={status}
                 onDrop={(e) => handleDrop(e, status)}
                 onDragOver={allowDrop}
-                className="bg-[#1e293b] rounded-xl p-4 border border-indigo-800/40 min-h-[300px]"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className={`rounded-xl p-4 min-h-[300px] bg-[#1e293b] border ${statusColors[status]} transition-all`}
               >
-                <h3 className="text-lg font-semibold capitalize text-center mb-4 text-indigo-400 tracking-wide">
+                <h3 className="text-lg font-bold capitalize text-center mb-4 text-white tracking-wider">
                   {status.replace("_", " ")}
                 </h3>
                 <ul className="space-y-3">
-                  {tasks[status].map((task) => (
-                    <li
+                  {filteredTasks[status].map((task) => (
+                    <motion.li
                       key={task.id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, task, status)}
-                      className="bg-[#334155] border border-slate-700 rounded-lg px-3 py-2 shadow hover:bg-[#475569] transition cursor-grab flex justify-between items-center"
+                      className="bg-[#334155] border border-slate-700 rounded-lg p-3 shadow hover:shadow-lg transition cursor-grab flex flex-col gap-2"
+                      whileHover={{ scale: 1.02 }}
                     >
-                      <span>{task.title}</span>
-                      <div className="flex gap-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-white font-semibold">
+                          {task.title}
+                        </span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            priorityBadge[task.priority]
+                          }`}
+                        >
+                          {task.priority}
+                        </span>
+                      </div>
+                      {task.description && (
+                        <p className="text-sm text-gray-400 truncate">
+                          {task.description}
+                        </p>
+                      )}
+                      {task.tags?.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {task.tags.map((tag, i) => (
+                            <span
+                              key={i}
+                              className="text-xs bg-indigo-600 px-2 py-1 rounded-full text-white"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {task.subtasks?.length > 0 && (
+                        <ul className="text-sm mt-2">
+                          {task.subtasks.map((sub, i) => (
+                            <li key={i} className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={sub.done}
+                                readOnly
+                              />
+                              <span>{sub.text}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {task.history?.length > 0 && (
+                        <details className="mt-2 text-sm text-gray-400">
+                          <summary className="cursor-pointer">
+                            Ver historial
+                          </summary>
+                          <ul className="ml-4 list-disc">
+                            {task.history.map((entry, i) => (
+                              <li key={i}>{entry}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                      <div className="flex justify-end gap-3 mt-2">
                         <button
                           onClick={() => openEditModal(task)}
                           className="text-emerald-400 hover:text-emerald-300 transition"
+                          title="Editar"
                         >
                           <Pencil size={18} />
                         </button>
                         <button
                           onClick={() => setTaskToDelete(task)}
                           className="text-red-400 hover:text-red-300 transition"
+                          title="Eliminar"
                         >
                           <Trash2 size={18} />
                         </button>
                       </div>
-                    </li>
+                    </motion.li>
                   ))}
                 </ul>
-              </div>
-            )
-          )}
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Notificación */}
+      {/* MODALES */}
       <Notification
         message={notif.message}
         type={notif.type}
@@ -245,6 +337,8 @@ export default function TaskList({ user, setUser }) {
         onClose={closeModal}
         onSubmit={handleSaveTask}
         editing={!!editingId}
+        modalTab={modalTab}
+        setModalTab={setModalTab}
         title={title}
         setTitle={setTitle}
         description={description}
@@ -257,9 +351,12 @@ export default function TaskList({ user, setUser }) {
         setTags={setTags}
         color={color}
         setColor={setColor}
+        subtasks={subtasks}
+        setSubtasks={setSubtasks}
+        history={history}
+        setHistory={setHistory}
       />
 
-      {/* Modal de confirmación */}
       <AnimatePresence>
         {taskToDelete && (
           <motion.div
