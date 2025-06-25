@@ -12,7 +12,7 @@ import TaskModal from "../components/TaskModal";
 import { logout } from "../services/authService";
 import { useNavigate } from "react-router-dom";
 
-export default function TaskList() {
+export default function TaskList({ user, setUser }) {
   const [tasks, setTasks] = useState({
     actividades: [],
     enProceso: [],
@@ -155,7 +155,8 @@ export default function TaskList() {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate("/login"); // 👈 Redirige al login
+      setUser(null); // 👈 Ahora sí va a limpiar el user
+      navigate("/login"); // Redirige al login
     } catch (err) {
       showNotif("Error al cerrar sesión", "error");
     }
@@ -164,9 +165,12 @@ export default function TaskList() {
   return (
     <div className="relative min-h-screen bg-[#111827] text-gray-200 p-4 font-mono">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold text-center text-gray-100 mb-8 tracking-wide">
+        <h2 className="text-3xl font-bold text-center text-gray-100 mb-2 tracking-wide">
           🛠️ Gestor de Tareas Dev
         </h2>
+        <p className="text-center text-indigo-400 mb-8">
+          Hola, {user?.username} 👋
+        </p>
 
         <div className="mb-8 flex justify-end">
           <button

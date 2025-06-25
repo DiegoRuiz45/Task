@@ -1,0 +1,300 @@
+:root {
+  --size: 8rem;
+  --color-core: #e5f295;
+  --color-eye: #efffc8;
+  --color-shadow: #5beebd;
+  --color-blink: #000;
+  --color-particles: #fdfdc4;
+  --blur: 0.3rem;
+  --particle-blur: 0.2rem;
+  --glow: 5rem;
+  --animation-speed: 3s;
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: var(--size);
+  height: var(--size);
+  position: relative;
+  animation: appear 0.8s ease-out;
+}
+
+.loader-wrapper {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(8px);
+  background-color: rgba(0, 0, 0, 0.6); /* negro translúcido */
+  z-index: 9999;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.head {
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-core);
+  border-radius: 50%;
+  box-shadow: 0 0 2rem var(--color-shadow), 0 0 1rem var(--color-shadow);
+  filter: blur(var(--blur));
+  z-index: 1;
+  animation:
+    move var(--animation-speed) linear infinite,
+    glowPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes move {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3px, 5px, 0) scale(1.05);
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 1rem var(--color-shadow), 0 0 0.5rem var(--color-shadow);
+  }
+  50% {
+    box-shadow: 0 0 2rem var(--color-shadow), 0 0 1rem var(--color-shadow);
+  }
+}
+
+.eye {
+  position: absolute;
+  width: 4rem;
+  height: 4rem;
+  background: var(--color-eye);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 1rem black;
+  z-index: 2;
+  animation: move 5s alternate infinite;
+}
+
+.eye::before {
+  content: "";
+  width: 1rem;
+  height: 2rem;
+  background: var(--color-blink);
+  border-radius: 50%;
+  animation: blink 4s ease-in-out infinite, look 6s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 20% {
+    height: 2rem;
+  }
+  30%, 40% {
+    height: 0;
+  }
+  50% {
+    height: 2rem;
+  }
+}
+
+@keyframes look {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(4px);
+  }
+  50% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateY(2px);
+  }
+}
+
+.flames {
+  position: absolute;
+  z-index: 0;
+}
+
+.flames::before {
+  content: "";
+  position: absolute;
+  width: var(--size);
+  height: var(--size);
+  background: var(--color-core);
+  filter: blur(var(--glow));
+  opacity: 0.5;
+  border-radius: 50%;
+  top: -8rem;
+  left: -4rem;
+  animation: pulse 3s linear infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.particle {
+  position: absolute;
+  background-color: var(--color-particles);
+  border-radius: 50%;
+  filter: blur(var(--particle-blur));
+  opacity: 0.7;
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-10px) scale(1.2);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.8;
+  }
+}
+
+/* Distribución individual (estática para demo, puedes aleatorizar) */
+.particle:nth-child(1) {
+  width: 4rem; height: 4rem; top: -6rem; left: -1rem;
+}
+.particle:nth-child(2) {
+  width: 1.5rem; height: 1.5rem; top: -8rem; left: -5rem;
+}
+.particle:nth-child(3) {
+  width: 4rem; height: 4rem; top: -5rem; left: -4rem;
+}
+.particle:nth-child(4) {
+  width: 3rem; height: 3rem; top: -7.5rem; left: -2rem;
+}
+.particle:nth-child(5) {
+  width: 2rem; height: 2rem; top: -9rem; left: 1rem;
+}
+.particle:nth-child(6) {
+  width: 2rem; height: 2rem; top: -6.8rem; left: -1.5rem;
+}
+.particle:nth-child(7) {
+  width: 1rem; height: 1rem; top: -10rem; left: -1rem;
+}
+.particle:nth-child(8) {
+  width: 1.3rem; height: 1.3rem; top: -7.5rem; left: -3rem;
+}
+
+
+
+.loading-text {
+  position: absolute;
+  bottom: -3rem;
+  font-size: 1.2rem;
+  color: #f1f1f1;
+  font-weight: 500;
+  font-family: 'Segoe UI', sans-serif;
+  animation: fadeText 3s ease-in-out infinite;
+  white-space: nowrap;
+  z-index: 3;
+}
+
+@keyframes fadeText {
+  0%, 100% {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Si quieres un efecto de escritura: */
+.typing::after {
+  content: '...';
+  animation: dots 1.2s steps(3, end) infinite;
+}
+
+@keyframes dots {
+  0% {
+    content: '';
+  }
+  33% {
+    content: '.';
+  }
+  66% {
+    content: '..';
+  }
+  100% {
+    content: '...';
+  }
+}
+.loading-text {
+  position: absolute;
+  bottom: -3.5rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #fdfdc4;
+  font-family: 'Segoe UI', sans-serif;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px #fdfdc4aa, 0 0 20px #fdfdc4aa;
+  animation: fadeText 3s ease-in-out infinite;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+/* Animación de entrada/salida */
+@keyframes fadeText {
+  0%, 100% {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Efecto de puntos animados estilo typing */
+.dots::after {
+  content: '';
+  animation: dots 1s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0% {
+    content: '';
+  }
+  25% {
+    content: '.';
+  }
+  50% {
+    content: '..';
+  }
+  75% {
+    content: '...';
+  }
+  100% {
+    content: '';
+  }
+}

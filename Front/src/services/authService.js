@@ -17,8 +17,7 @@ export const logout = async () => {
   const res = await fetch(`${import.meta.env.VITE_API_URL_AUTH}/auth/logout`, {
     method: "POST",
     credentials: "include", // Importante para borrar la cookie de sesión
-  });
-
+  }); 
   if (!res.ok) throw new Error("Error al cerrar sesión");
 };
 

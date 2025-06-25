@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import Login from "./components/Login";
 import TaskList from "./components/TaskList";
 import { getCurrentUser } from "./services/authService"; // ahora te doy esta
@@ -30,11 +35,19 @@ export default function App() {
       <Routes>
         <Route
           path="/login"
-          element={user ? <Navigate to="/" /> : <Login onLoginSuccess={setUser} />}
+          element={
+            user ? <Navigate to="/" /> : <Login onLoginSuccess={setUser} />
+          }
         />
         <Route
           path="/"
-          element={user ? <TaskList user={user} setUser={setUser} /> : <Navigate to="/login" />}
+          element={
+            user ? (
+              <TaskList user={user} setUser={setUser} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
         />
       </Routes>
     </Router>

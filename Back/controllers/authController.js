@@ -5,9 +5,10 @@ const userService = require('../services/userService');
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto123';
 const COOKIE_OPTIONS = {
     httpOnly: true,
-    secure: false, // cambia a true si usas HTTPS
+    secure: false, // cambia a true si usas HTTPS en producción
     sameSite: 'lax',
     maxAge: 1000 * 60 * 60 * 24, // 1 día
+    path: '/', // 👈 MUY IMPORTANTE para que clearCookie funcione en todo el sitio
 };
 
 exports.login = async (req, res) => {
@@ -29,9 +30,19 @@ exports.login = async (req, res) => {
 };
 
 exports.logout = (req, res) => {
-    res.clearCookie('token').json({ message: 'Logout exitoso' });
+    res.clearCookie('token', COOKIE_OPTIONS).json({ message: 'Logout exitoso' });
 };
 
 exports.getMe = (req, res) => {
-    res.json({ user: req.user });
+    // Si no hay cookie, respondemos 401
+    if (!req.cookies.token) {
+        return res.status(401).json({ error: 'No autenticado' });
+    }
+
+    try {
+        const decoded = jwt.verify(req.cookies.token, JWT_SECRET);
+        res.json({ user: decoded });
+    } catch (err) {
+        res.status(401).json({ error: 'Token inválido' });
+    }
 };

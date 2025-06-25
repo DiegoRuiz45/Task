@@ -9,6 +9,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
 ];
+
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -19,14 +20,12 @@ app.use(cors({
   },
   credentials: true,
 }));
+
 app.use(express.json());
 app.use(cookieParser());
 
-// Secret (en producción debe venir de .env)
-const SECRET = process.env.JWT_SECRET || 'super_secreto';
-
 // Importa rutas y middleware
-const authRoutes = require('./routes/authRoutes');
+const authRoutes = require('./routes/auth'); // ✅ corregido el nombre
 const taskRoutes = require('./routes/tasks');
 const authMiddleware = require('./middlewares/auth');
 
