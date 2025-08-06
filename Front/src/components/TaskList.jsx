@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   getTasks,
   createTask,
@@ -9,8 +9,6 @@ import Notification from "../components/Notification";
 import { AnimatePresence, motion } from "framer-motion";
 import { Pencil, Trash2, PlusCircle, AlertTriangle } from "lucide-react";
 import TaskModal from "../components/TaskModal";
-import { logout } from "../services/authService";
-import { useNavigate } from "react-router-dom";
 
 const statusColors = {
   actividades: "border-blue-500 shadow-blue-500/20",
@@ -25,7 +23,7 @@ const priorityBadge = {
   baja: "bg-green-500 text-white",
 };
 
-export default function TaskList({ user, setUser }) {
+export default function TaskList({ user }) {
   const [tasks, setTasks] = useState({
     actividades: [],
     enProceso: [],
@@ -33,7 +31,6 @@ export default function TaskList({ user, setUser }) {
     cancelado: [],
   });
   const [searchTerm, setSearchTerm] = useState("");
-  const navigate = useNavigate();
   const [notif, setNotif] = useState({ message: "", type: "" });
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,18 +40,18 @@ export default function TaskList({ user, setUser }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("media");
-  const [userId, setUserId] = useState(null);
   const [tags, setTags] = useState([]);
   const [color, setColor] = useState("#60a5fa");
   const [subtasks, setSubtasks] = useState([]);
   const [history, setHistory] = useState([]);
+  const [userIds, setUserIds] = useState([]);
 
   const showNotif = (message, type = "info") => {
     setNotif({ message, type });
     setTimeout(() => setNotif({ message: "", type: "" }), 3000);
   };
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       const data = await getTasks();
       const grouped = {
@@ -70,7 +67,11 @@ export default function TaskList({ user, setUser }) {
     } catch {
       showNotif("Error al obtener tareas", "error");
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
 
   const handleSaveTask = async () => {
     if (!title.trim()) return;
@@ -78,13 +79,15 @@ export default function TaskList({ user, setUser }) {
       title,
       description,
       priority,
-      user_id: userId,
+      user_ids: userIds,
       tags,
       color,
       subtasks,
       history,
       status: "actividades",
     };
+
+    console.log(taskData);
 
     try {
       if (editingId) {
@@ -143,7 +146,6 @@ export default function TaskList({ user, setUser }) {
     setTitle("");
     setDescription("");
     setPriority("media");
-    setUserId(null);
     setTags([]);
     setColor("#60a5fa");
     setSubtasks([]);
@@ -151,10 +153,6 @@ export default function TaskList({ user, setUser }) {
     setEditingId(null);
     setModalTab("detalles");
   };
-
-  useEffect(() => {
-    fetchTasks();
-  }, []);
 
   const openCreateModal = () => {
     closeModal();
@@ -165,8 +163,8 @@ export default function TaskList({ user, setUser }) {
     setTitle(task.title || "");
     setDescription(task.description || "");
     setPriority(task.priority || "media");
-    setUserId(task.user_id || null);
-    setTags(task.tags || []);
+    setUserIds(task.user_ids || null);
+    setTags(Array.isArray(task.tags) ? task.tags : safeParseArray(task.tags));
     setColor(task.color || "#60a5fa");
     setSubtasks(task.subtasks || []);
     setHistory(task.history || []);
@@ -177,20 +175,23 @@ export default function TaskList({ user, setUser }) {
   const filteredTasks = Object.fromEntries(
     Object.entries(tasks).map(([status, items]) => [
       status,
-      items.filter(
-        (t) =>
-          t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (t.tags || []).some((tag) =>
-            tag.toLowerCase().includes(searchTerm.toLowerCase())
+      items.filter((t) =>
+        [
+          t.title,
+          t.description,
+          ...(t.tags || []),
+          ...(t.user_names || []), // ✅ Agregado: nombres de usuario
+        ]
+          .filter(Boolean)
+          .some((field) =>
+            field.toLowerCase().includes(searchTerm.toLowerCase())
           )
       ),
     ])
   );
 
   return (
-    <div className=" h-screen bg-[#111827] text-gray-200 font-mono flex flex-col">
-      {/* HEADER */}
+    <div className="h-screen bg-[#111827] text-gray-200 font-mono flex flex-col">
       <div className="p-4 flex-shrink-0">
         <div className="max-w-6xl mx-auto">
           <div className="mb-4 flex justify-between items-center">
@@ -200,27 +201,41 @@ export default function TaskList({ user, setUser }) {
               </h2>
               <p className="text-indigo-400">Hola, {user?.username} 👋</p>
             </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Buscar tareas..."
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-gray-800 text-white px-3 py-2 rounded-md"
-              />
+            <div className="flex gap-2 items-center">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Buscar tareas..."
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="bg-gray-800 text-white px-4 py-2 rounded-md pl-10 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <svg
+                  className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M21 21l-4.35-4.35M15.5 10.5A5 5 0 1110.5 5a5 5 0 015 5z"
+                  ></path>
+                </svg>
+              </div>
               <button
                 onClick={openCreateModal}
-                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
               >
-                <PlusCircle size={18} />
-                Crear
+                <PlusCircle size={18} /> Crear
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* CONTENIDO SCROLLEABLE */}
-      <div className="flex-1 overflow-y-auto p-4 min-h-0">
+      <div className="flex-1 overflow-y-auto p-4 min-h-0 custom-scroll">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {Object.keys(filteredTasks).map((status) => (
@@ -257,6 +272,7 @@ export default function TaskList({ user, setUser }) {
                           {task.priority}
                         </span>
                       </div>
+
                       {task.description && (
                         <p className="text-sm text-gray-400 truncate">
                           {task.description}
@@ -300,6 +316,12 @@ export default function TaskList({ user, setUser }) {
                           </ul>
                         </details>
                       )}
+                      {/* 👥 Participantes */}
+                      {task.user_names?.length > 0 && (
+                        <p className="text-xs text-gray-400 italic">
+                          👥 {task.user_names.join(", ")}
+                        </p>
+                      )}
                       <div className="flex justify-end gap-3 mt-2">
                         <button
                           onClick={() => openEditModal(task)}
@@ -325,7 +347,6 @@ export default function TaskList({ user, setUser }) {
         </div>
       </div>
 
-      {/* MODALES */}
       <Notification
         message={notif.message}
         type={notif.type}
@@ -345,8 +366,8 @@ export default function TaskList({ user, setUser }) {
         setDescription={setDescription}
         priority={priority}
         setPriority={setPriority}
-        userId={userId}
-        setUserId={setUserId}
+        userIds={userIds}
+        setUserIds={setUserIds}
         tags={tags}
         setTags={setTags}
         color={color}

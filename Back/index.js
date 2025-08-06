@@ -26,14 +26,16 @@ app.use(cookieParser());
 
 // Importa rutas y middleware
 const authRoutes = require('./routes/auth'); // ✅ corregido el nombre
-const taskRoutes = require('./routes/tasks');
-const authMiddleware = require('./middlewares/auth');
-
+const taskRoutes = require('./routes/tasks'); 
+const roleRoutes = require('./routes/roles');
 // Rutas públicas
-app.use('/auth', authRoutes);
+app.use('/auth', authRoutes);    
+app.use('/api/tasks', taskRoutes);
+app.use('/api/roles', roleRoutes);
+const listEndpoints = require('express-list-endpoints');
 
-// Rutas protegidas
-app.use('/api', authMiddleware, taskRoutes);
+console.log("📡 Rutas registradas:");
+console.table(listEndpoints(app));
 
 app.listen(3001, () => {
   console.log('🚀 Servidor backend corriendo en http://localhost:3001');
