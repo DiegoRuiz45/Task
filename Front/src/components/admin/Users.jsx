@@ -1,188 +1,219 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { Pencil, Trash2, CheckCircle, XCircle } from "lucide-react";
 import { createUser, getUsers, deleteUser, updateUser } from "../../services/authService";
 import { getRoles } from "../../services/roleService";
-import { CheckCircle, XCircle, Pencil, Trash2 } from "lucide-react";
+import Table from "../Table/Table";
+import Modal from "../Modal/Modal";
 
 function Users() {
-  const [form, setForm] = useState({ id: null, username: "", password: "", role: "" });
-  const [roles, setRoles] = useState([]);
   const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [search, setSearch] = useState("");
   const [feedback, setFeedback] = useState({ type: null, message: "" });
 
+  // Modal state
+  const [openModal, setOpenModal] = useState(false);
+  const [mode, setMode] = useState("create"); // 'create' | 'edit'
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({ username: "", password: "", role: "" });
+
   useEffect(() => {
-    fetchRoles();
-    fetchUsers();
+    load();
   }, []);
 
-  const fetchRoles = async () => {
+  const load = async () => {
     try {
-      const data = await getRoles();
-      setRoles(data);
+      const [u, r] = await Promise.all([getUsers(), getRoles()]);
+      setUsers(Array.isArray(u) ? u : []);
+      setRoles(Array.isArray(r) ? r : []);
     } catch (err) {
-      console.error("❌ Error al cargar roles:", err);
-      setRoles([]);
+      console.error("❌ Error cargando usuarios/roles:", err);
+      setFeedback({ type: "error", message: "No se pudieron cargar usuarios/roles" });
     }
   };
 
-  const fetchUsers = async () => {
-    try {
-      const data = await getUsers(); // ✅ Import corregido
-      setUsers(data);
-    } catch (err) {
-      console.error("❌ Error al cargar usuarios:", err);
-    }
+  // Columnas para Table
+  const columns = [
+    { key: "id", header: "ID", className: "text-gray-300" },
+    { key: "username", header: "Usuario", className: "text-white" },
+    {
+      key: "role",
+      header: "Rol",
+      cell: (v) => v || "—",
+    },
+  ];
+
+  // Acciones por fila
+  const actions = (row) => (
+    <>
+      <button
+        onClick={() => {
+          setMode("edit");
+          setEditingId(row.id);
+          setForm({ username: row.username || "", password: "", role: row.role || "" });
+          setOpenModal(true);
+        }}
+        className="text-blue-400 hover:text-blue-600"
+        title="Editar usuario"
+      >
+        <Pencil size={18} />
+      </button>
+      <button
+        onClick={async () => {
+          if (!confirm("¿Eliminar este usuario?")) return;
+          try {
+            await deleteUser(row.id);
+            setFeedback({ type: "success", message: "Usuario eliminado." });
+            load();
+          } catch (err) {
+            console.error("❌", err);
+            setFeedback({ type: "error", message: "No se pudo eliminar el usuario." });
+          }
+        }}
+        className="text-red-400 hover:text-red-600"
+        title="Eliminar usuario"
+      >
+        <Trash2 size={18} />
+      </button>
+    </>
+  );
+
+  const onCreate = () => {
+    setMode("create");
+    setEditingId(null);
+    setForm({ username: "", password: "", role: "" });
+    setOpenModal(true);
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e) => {
+  const save = async (e) => {
     e.preventDefault();
     setFeedback({ type: null, message: "" });
 
+    if (!form.username.trim()) {
+      return setFeedback({ type: "error", message: "El usuario es obligatorio." });
+    }
     if (!form.role) {
       return setFeedback({ type: "error", message: "Selecciona un rol válido." });
     }
+    if (mode === "create" && !form.password.trim()) {
+      return setFeedback({ type: "error", message: "La contraseña es obligatoria." });
+    }
 
     try {
-      if (form.id) {
-        console.log("Actualizando usuario:", form);
-        await updateUser(form.id, form);
+      if (mode === "edit" && editingId) {
+        // Si no se escribió password, no la mandes (para no sobreescribir con vacío).
+        const payload = { username: form.username, role: form.role };
+        if (form.password?.trim()) payload.password = form.password.trim();
+
+        await updateUser(editingId, payload);
         setFeedback({ type: "success", message: "Usuario actualizado." });
       } else {
         await createUser(form);
         setFeedback({ type: "success", message: "Usuario creado correctamente." });
       }
-      setForm({ id: null, username: "", password: "", role: "" });
-      fetchUsers();
+      setOpenModal(false);
+      load();
     } catch (err) {
       const msg = err?.response?.data?.error || "Error al procesar usuario";
       setFeedback({ type: "error", message: msg });
     }
   };
 
-  const handleEdit = (user) => {
-    setForm({ id: user.id, username: user.username, password: "", role: user.role });
-  };
-
-  const handleDelete = async (id) => {
-    if (!confirm("¿Seguro que deseas eliminar este usuario?")) return;
-    try {
-      await deleteUser(id);
-      setFeedback({ type: "success", message: "Usuario eliminado." });
-      fetchUsers();
-    } catch (err) {
-      setFeedback({ type: "error", message: "No se pudo eliminar el usuario." });
-    }
-  };
-
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-[#1e293b] text-gray-200 rounded-lg border border-indigo-700">
-      <h2 className="text-2xl font-bold mb-2">👥 Gestión de Usuarios</h2>
-      <p className="text-sm text-gray-400 mb-4">
-        Crea, edita y elimina usuarios del sistema.
-      </p>
-
-      <form onSubmit={handleSubmit} className="space-y-4 mb-6">
-        <div>
-          <label className="block text-sm mb-1 font-medium">Usuario</label>
-          <input
-            type="text"
-            name="username"
-            value={form.username}
-            onChange={handleChange}
-            required
-            className="w-full bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-md"
-            placeholder="Ej: juan.perez"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm mb-1 font-medium">Contraseña</label>
-          <input
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            className="w-full bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-md"
-            placeholder={form.id ? "Deja en blanco para no cambiarla" : "********"}
-            required={!form.id}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm mb-1 font-medium">Rol</label>
-          <select
-            name="role"
-            value={form.role}
-            onChange={handleChange}
-            required
-            className="w-full bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-md"
-          >
-            <option value="" disabled>
-              — Selecciona un rol —
-            </option>
-            {roles.map((role) => (
-              <option key={role.id} value={role.name}>
-                {role.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-indigo-600 hover:bg-indigo-700 transition text-white py-2 rounded-md"
-        >
-          {form.id ? "Actualizar Usuario" : "Crear Usuario"}
-        </button>
-      </form>
-
+    <div className="mx-auto w-full max-w-5xl">
       {feedback.message && (
         <div
-          className={`mb-4 flex items-center gap-2 px-4 py-3 rounded-md text-sm ${
-            feedback.type === "success"
-              ? "bg-green-800 text-green-200"
-              : "bg-red-800 text-red-200"
+          className={`mb-4 flex items-center gap-2 rounded-md px-3 py-2 ${
+            feedback.type === "success" ? "bg-green-800 text-green-200" : "bg-red-800 text-red-200"
           }`}
         >
           {feedback.type === "success" ? <CheckCircle size={20} /> : <XCircle size={20} />}
-          <span>{feedback.message}</span>
+          <span className="text-sm">{feedback.message}</span>
         </div>
       )}
 
-      <h3 className="text-lg font-semibold mb-2">📋 Usuarios registrados</h3>
-      <ul className="space-y-2">
-        {users.map((user) => (
-          <li
-            key={user.id}
-            className="bg-gray-800 p-3 rounded-md flex items-center justify-between"
-          >
-            <div>
-              <p className="text-white font-medium">{user.username}</p>
-              <p className="text-xs text-gray-400">Rol: {user.role}</p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleEdit(user)}
-                className="text-yellow-400 hover:text-yellow-600"
-                title="Editar"
-              >
-                <Pencil size={18} />
-              </button>
-              <button
-                onClick={() => handleDelete(user.id)}
-                className="text-red-400 hover:text-red-600"
-                title="Eliminar"
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <Table
+        title="👥 Gestión de Usuarios"
+        data={users}
+        columns={columns}
+        search={search}
+        onSearchChange={setSearch}
+        searchBy={["username", "role"]}
+        onCreate={onCreate}
+        createLabel="Nuevo"
+        actions={actions}
+        emptyText="No hay usuarios registrados."
+        noResultsText="Sin resultados para el filtro."
+      />
+
+      <Modal
+        open={openModal}
+        title={mode === "edit" ? "Editar Usuario" : "Crear Usuario"}
+        onClose={() => setOpenModal(false)}
+      >
+        <form onSubmit={save} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm text-gray-200">Usuario</label>
+            <input
+              name="username"
+              value={form.username}
+              onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))}
+              required
+              className="w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-white focus:outline-none focus:ring focus:ring-indigo-500"
+              placeholder="Ej: juan.perez"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm text-gray-200">
+              Contraseña {mode === "edit" && <span className="text-gray-400">(opcional)</span>}
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={form.password}
+              onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+              className="w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-white focus:outline-none focus:ring focus:ring-indigo-500"
+              placeholder={mode === "edit" ? "Deja en blanco para no cambiarla" : "********"}
+              required={mode === "create"}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm text-gray-200">Rol</label>
+            <select
+              name="role"
+              value={form.role}
+              onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
+              required
+              className="w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-white focus:outline-none focus:ring focus:ring-indigo-500"
+            >
+              <option value="" disabled>— Selecciona un rol —</option>
+              {roles.map((r) => (
+                <option key={r.id} value={r.name}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setOpenModal(false)}
+              className="rounded-md px-4 py-2 text-sm text-gray-300 hover:bg-white/10"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="rounded-md bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+            >
+              {mode === "edit" ? "Guardar cambios" : "Crear Usuario"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

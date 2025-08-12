@@ -28,10 +28,12 @@ app.use(cookieParser());
 const authRoutes = require('./routes/auth'); // ✅ corregido el nombre
 const taskRoutes = require('./routes/tasks'); 
 const roleRoutes = require('./routes/roles');
+const tagRoutes = require('./routes/tag');
 // Rutas públicas
 app.use('/auth', authRoutes);    
 app.use('/api/tasks', taskRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api', tagRoutes);
 const listEndpoints = require('express-list-endpoints');
 
 console.log("📡 Rutas registradas:");
