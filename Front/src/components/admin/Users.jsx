@@ -77,6 +77,17 @@ function Users() {
       setFeedback({ type: "error", message: "No se pudo eliminar el usuario." });
     }
   };
+  const [preview, setPreview] = useState(null);
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setForm({ ...form, profileImage: file });
+
+    if (file) {
+      setPreview(URL.createObjectURL(file));
+    } else {
+      setPreview(null);
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-[#1e293b] text-gray-200 rounded-lg border border-indigo-700">
@@ -85,7 +96,7 @@ function Users() {
         Crea, edita y elimina usuarios del sistema.
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+      {/* <form onSubmit={handleSubmit} className="space-y-4 mb-6">
         <div>
           <label className="block text-sm mb-1 font-medium">Usuario</label>
           <input
@@ -138,7 +149,95 @@ function Users() {
         >
           {form.id ? "Actualizar Usuario" : "Crear Usuario"}
         </button>
-      </form>
+      </form> */
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 mb-6"
+          encType="multipart/form-data"
+        >
+          {/* Usuario */}
+          <div>
+            <label className="block text-sm mb-1 font-medium">Usuario</label>
+            <input
+              type="text"
+              name="username"
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              required
+              className="w-full bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-md"
+              placeholder="Ej: juan.perez"
+            />
+          </div>
+
+          {/* Contraseña */}
+          <div>
+            <label className="block text-sm mb-1 font-medium">Contraseña</label>
+            <input
+              type="password"
+              name="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className="w-full bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-md"
+              placeholder={form.id ? "Deja en blanco para no cambiarla" : "********"}
+              required={!form.id}
+            />
+          </div>
+
+          {/* Rol */}
+          <div>
+            <label className="block text-sm mb-1 font-medium">Rol</label>
+            <select
+            name="role"
+            value={form.role}
+            onChange={handleChange}
+            required
+            className="w-full bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-md"
+          >
+            <option value="" disabled>
+              — Selecciona un rol —
+            </option>
+            {roles.map((role) => (
+              <option key={role.id} value={role.name}>
+                {role.name}
+              </option>
+            ))}
+          </select>
+          </div>
+
+          {/* Imagen con preview */}
+          <div>
+            <label className="block text-sm mb-1 font-medium">Foto de perfil</label>
+            <div className="flex items-center gap-4">
+              <input
+                type="file"
+                name="profileImage"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-indigo-600 file:text-white hover:file:bg-indigo-700"
+              />
+              {preview && (
+                <div className="w-24 h-24 border-2 border-gray-600 rounded-md overflow-hidden shadow-md">
+                  <img
+                    src={preview}
+                    alt="Vista previa"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Botón */}
+          <button
+            type="submit"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 transition text-white py-2 rounded-md"
+          >
+            {form.id ? "Actualizar Usuario" : "Crear Usuario"}
+          </button>
+        </form>
+
+      
+      }
 
       {feedback.message && (
         <div

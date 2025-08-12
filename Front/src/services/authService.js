@@ -42,16 +42,19 @@ export const getUsers = async () => {
 }
 
 export const createUser = async (userData) => {
+  const formData = new FormData();
+  formData.append("username", userData.username);
+  formData.append("password", userData.password);
+  formData.append("role", userData.role);
+  formData.append("profileImage", userData.profileImage); // el archivo
+
   const res = await fetch(`${import.meta.env.VITE_API_URL_AUTH}/auth/create-user`, {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(userData),
+    body: formData, // sin headers de Content-Type, fetch lo pone solo
   });
 
-  if (!res.ok) throw new Error("Error al crear usuario");
-
-  return await res.json(); // { user: ... }
+  return res.json();
 }
 
 // 🛠 Actualizar usuario
